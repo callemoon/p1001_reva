@@ -38,16 +38,22 @@
 
 /* Private functions */
 
-//#define I2C_TEST
-#define I2C_INIT
-//#define I2C_WRITE
-#define I2C_READ
+//#define I2C_PIN_TEST	// Set I2C pins to output open drain to measure function with mutilmeter
+#define I2C_INIT	// Init I2C for eeprom
+//#define I2C_WRITE	// Writes data to eeprom
+#define I2C_READ	// Reads data from eeprom
 
 extern "C"
 {
 /* Global variables */
 uint32_t timer=0;
 uint8_t  timerFlag=0;
+
+static const uint8_t EEPROM_ID	= 0xA0;
+static const uint16_t DATAADDRESS = 0x0;
+static const uint8_t TESTDATA1 = 0x33;
+static const uint8_t TESTDATA2 = 0x77;
+
 
 /**
 **===========================================================================
@@ -115,7 +121,7 @@ int main(void)
   gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(GPIOA, &gpio);
 
-#ifdef I2C_TEST
+#ifdef I2C_PIN_TEST
   // PB6 I2C1_SCL
   // PB7 I2C1_SDA
   gpio.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
@@ -165,27 +171,27 @@ int main(void)
 #ifdef I2C_WRITE
   while(I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY) == SET);
 
-  I2C_TransferHandling(I2C1, 0xA0, 2, I2C_Reload_Mode, I2C_Generate_Start_Write);
+  I2C_TransferHandling(I2C1, EEPROM_ID, 2, I2C_Reload_Mode, I2C_Generate_Start_Write);
 
   while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
 
-  I2C_SendData(I2C1, (uint8_t)((WriteAddr & 0xFF00) >> 8));
+  I2C_SendData(I2C1, (uint8_t)((DATAADDRESS & 0xFF00) >> 8));
 
   while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
 
-  I2C_SendData(I2C1, (uint8_t)(WriteAddr & 0x00FF));
+  I2C_SendData(I2C1, (uint8_t)(DATAADDRESS & 0x00FF));
 
   while(I2C_GetFlagStatus(I2C1, I2C_ISR_TCR) == RESET);
 
-  I2C_TransferHandling(I2C1, 0xA0, 2, I2C_AutoEnd_Mode, I2C_No_StartStop);
+  I2C_TransferHandling(I2C1, EEPROM_ID, 2, I2C_AutoEnd_Mode, I2C_No_StartStop);
 
   while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
 
-  I2C_SendData(I2C1, 51);
+  I2C_SendData(I2C1, TESTDATA1);
 
   while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
 
-  I2C_SendData(I2C1, 52);
+  I2C_SendData(I2C1, TESTDATA2);
 
   while(I2C_GetFlagStatus(I2C1, I2C_ISR_STOPF) == RESET);
 
@@ -198,19 +204,19 @@ int main(void)
 
   while(I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY) == SET);
   // Read back data
-  I2C_TransferHandling(I2C1, 0xA0, 2, I2C_SoftEnd_Mode, I2C_Generate_Start_Write);
+  I2C_TransferHandling(I2C1, EEPROM_ID, 2, I2C_SoftEnd_Mode, I2C_Generate_Start_Write);
 
   while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
 
-  I2C_SendData(I2C1, (uint8_t)((WriteAddr & 0xFF00) >> 8));
+  I2C_SendData(I2C1, (uint8_t)((DATAADDRESS & 0xFF00) >> 8));
 
   while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
 
-  I2C_SendData(I2C1, (uint8_t)(WriteAddr & 0x00FF));
+  I2C_SendData(I2C1, (uint8_t)(DATAADDRESS & 0x00FF));
 
   while(I2C_GetFlagStatus(I2C1, I2C_ISR_TC) == RESET);
 
-  I2C_TransferHandling(I2C1, 0xA0, 2, I2C_AutoEnd_Mode, I2C_Generate_Start_Read);
+  I2C_TransferHandling(I2C1, EEPROM_ID, 2, I2C_AutoEnd_Mode, I2C_Generate_Start_Read);
 
   while(I2C_GetFlagStatus(I2C1, I2C_ISR_RXNE) == RESET);
 
@@ -224,6 +230,11 @@ int main(void)
 
    /* Clear STOPF flag */
   I2C_ClearFlag(I2C1, I2C_ICR_STOPCF);
+
+  if(readback != TESTDATA1 || readback2 != TESTDATA2)
+  {
+	  return 0;
+  }
 #endif
 
   bool on = false;
@@ -242,7 +253,7 @@ int main(void)
 			  GPIO_WriteBit(GPIOB, GPIO_Pin_5, Bit_SET);
 			  GPIO_WriteBit(GPIOA, GPIO_Pin_10, Bit_SET);
 
-#ifdef I2C_TEST
+#ifdef I2C_PIN_TEST
 			  GPIO_WriteBit(GPIOB, GPIO_Pin_6, Bit_SET);
 			  GPIO_WriteBit(GPIOB, GPIO_Pin_7, Bit_SET);
 #endif
@@ -252,7 +263,7 @@ int main(void)
 			  GPIO_WriteBit(GPIOB, GPIO_Pin_5, Bit_RESET);
 			  GPIO_WriteBit(GPIOA, GPIO_Pin_10, Bit_RESET);
 
-#ifdef I2C_TEST
+#ifdef I2C_PIN_TEST
 			  GPIO_WriteBit(GPIOB, GPIO_Pin_6, Bit_RESET);
 			  GPIO_WriteBit(GPIOB, GPIO_Pin_7, Bit_RESET);
 #endif

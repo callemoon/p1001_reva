@@ -38,10 +38,10 @@
 
 /* Private functions */
 
-//#define TEST
-#define INIT
-//#define WRITE
-#define READ
+//#define I2C_TEST
+#define I2C_INIT
+//#define I2C_WRITE
+#define I2C_READ
 
 extern "C"
 {
@@ -107,45 +107,18 @@ int main(void)
   gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(GPIOA, &gpio);
 
-  gpio.GPIO_Pin = GPIO_Pin_0;
+  // PA0-3 is analog in
+  gpio.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
   gpio.GPIO_Mode = GPIO_Mode_AN;
   gpio.GPIO_Speed = GPIO_Speed_Level_3;
   gpio.GPIO_OType = GPIO_OType_PP;
   gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(GPIOA, &gpio);
 
-  gpio.GPIO_Pin = GPIO_Pin_1;
-  gpio.GPIO_Mode = GPIO_Mode_AN;
-  gpio.GPIO_Speed = GPIO_Speed_Level_3;
-  gpio.GPIO_OType = GPIO_OType_PP;
-  gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIOA, &gpio);
-
-  gpio.GPIO_Pin = GPIO_Pin_2;
-  gpio.GPIO_Mode = GPIO_Mode_AN;
-  gpio.GPIO_Speed = GPIO_Speed_Level_3;
-  gpio.GPIO_OType = GPIO_OType_PP;
-  gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIOA, &gpio);
-
-  gpio.GPIO_Pin = GPIO_Pin_3;
-  gpio.GPIO_Mode = GPIO_Mode_AN;
-  gpio.GPIO_Speed = GPIO_Speed_Level_3;
-  gpio.GPIO_OType = GPIO_OType_PP;
-  gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIOA, &gpio);
-
-#ifdef TEST
+#ifdef I2C_TEST
   // PB6 I2C1_SCL
-  gpio.GPIO_Pin = GPIO_Pin_6;
-  gpio.GPIO_Mode = GPIO_Mode_OUT;
-  gpio.GPIO_Speed = GPIO_Speed_Level_3;
-  gpio.GPIO_OType = GPIO_OType_OD;
-  gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIOB, &gpio);
-//
-//  // PB7 I2C1_SDA
-  gpio.GPIO_Pin = GPIO_Pin_7;
+  // PB7 I2C1_SDA
+  gpio.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
   gpio.GPIO_Mode = GPIO_Mode_OUT;
   gpio.GPIO_Speed = GPIO_Speed_Level_3;
   gpio.GPIO_OType = GPIO_OType_OD;
@@ -153,7 +126,7 @@ int main(void)
   GPIO_Init(GPIOB, &gpio);
 #endif
 
-#ifdef INIT
+#ifdef I2C_INIT
   I2C_InitTypeDef  I2C_InitStructure;
 
   RCC_I2CCLKConfig(RCC_I2C1CLK_HSI);
@@ -163,6 +136,7 @@ int main(void)
   GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_1);
 
   // PB6 I2C1_SCL
+  // PB7 I2C1_SDA
   gpio.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
   gpio.GPIO_Mode = GPIO_Mode_AF;
   gpio.GPIO_Speed = GPIO_Speed_Level_3;
@@ -177,11 +151,7 @@ int main(void)
   I2C_InitStructure.I2C_OwnAddress1 = 0x0;
   I2C_InitStructure.I2C_Ack = I2C_Ack_Enable;
   I2C_InitStructure.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
-//  I2C_InitStructure.I2C_Timing =   0x00201D2B;	// 8Mhz
-  //I2C_InitStructure.I2C_Timing =   0x10805E89;	// 48Mhz works!
-  //I2C_InitStructure.I2C_Timing = 0xB0420F13;
   I2C_InitStructure.I2C_Timing = 0x10420f13;
-  //I2C_InitStructure.I2C_Timing = 0x10805E89;
 
   /* Apply sEE_I2C configuration after enabling it */
   I2C_Init(I2C1, &I2C_InitStructure);
@@ -192,7 +162,7 @@ int main(void)
   uint16_t WriteAddr = 1;
 #endif
 
-#ifdef WRITE
+#ifdef I2C_WRITE
   while(I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY) == SET);
 
   I2C_TransferHandling(I2C1, 0xA0, 2, I2C_Reload_Mode, I2C_Generate_Start_Write);
@@ -222,7 +192,7 @@ int main(void)
   I2C_ClearFlag(I2C1, I2C_ICR_STOPCF);
 #endif
 
-#ifdef READ
+#ifdef I2C_READ
   uint8_t readback;
   uint8_t readback2;
 
@@ -272,7 +242,7 @@ int main(void)
 			  GPIO_WriteBit(GPIOB, GPIO_Pin_5, Bit_SET);
 			  GPIO_WriteBit(GPIOA, GPIO_Pin_10, Bit_SET);
 
-#ifdef TEST
+#ifdef I2C_TEST
 			  GPIO_WriteBit(GPIOB, GPIO_Pin_6, Bit_SET);
 			  GPIO_WriteBit(GPIOB, GPIO_Pin_7, Bit_SET);
 #endif
@@ -282,7 +252,7 @@ int main(void)
 			  GPIO_WriteBit(GPIOB, GPIO_Pin_5, Bit_RESET);
 			  GPIO_WriteBit(GPIOA, GPIO_Pin_10, Bit_RESET);
 
-#ifdef TEST
+#ifdef I2C_TEST
 			  GPIO_WriteBit(GPIOB, GPIO_Pin_6, Bit_RESET);
 			  GPIO_WriteBit(GPIOB, GPIO_Pin_7, Bit_RESET);
 #endif

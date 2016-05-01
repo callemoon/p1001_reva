@@ -164,8 +164,6 @@ int main(void)
 
   /* sEE_I2C Peripheral Enable */
   I2C_Cmd(I2C1, ENABLE);
-
-  uint16_t WriteAddr = 1;
 #endif
 
 #ifdef I2C_WRITE

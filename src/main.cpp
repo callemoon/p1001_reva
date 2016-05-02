@@ -38,10 +38,10 @@
 
 /* Private functions */
 
-//#define I2C_PIN_TEST	// Set I2C pins to output open drain to measure function with mutilmeter
-#define I2C_INIT	// Init I2C for eeprom
+#define I2C_PIN_TEST	// Set I2C pins to output open drain to measure function with mutilmeter
+//#define I2C_INIT	// Init I2C for eeprom
 //#define I2C_WRITE	// Writes data to eeprom
-#define I2C_READ	// Reads data from eeprom
+//#define I2C_READ	// Reads data from eeprom
 
 extern "C"
 {
@@ -53,7 +53,6 @@ static const uint8_t EEPROM_ID	= 0xA0;
 static const uint16_t DATAADDRESS = 0x0;
 static const uint8_t TESTDATA1 = 0x33;
 static const uint8_t TESTDATA2 = 0x77;
-
 
 /**
 **===========================================================================
@@ -73,6 +72,52 @@ void SysTick_Handler(void)
 }
 }
 
+static void ADC_Config(void)
+{
+  ADC_InitTypeDef     ADC_InitStructure;
+  GPIO_InitTypeDef    GPIO_InitStructure;
+
+  /* GPIOA Periph clock enable */
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
+
+  /* ADC1 Periph clock enable */
+  RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
+
+  /* Configure ADC Channel 0,1,2,3 as analog input */
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;;
+  GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
+  GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+  GPIO_Init(GPIOA, &GPIO_InitStructure);
+
+  /* ADCs DeInit */
+  ADC_DeInit(ADC1);
+
+  /* Initialize ADC structure */
+  ADC_StructInit(&ADC_InitStructure);
+
+  /* Configure the ADC1 in continuous mode with a resolution equal to 12 bits  */
+  ADC_InitStructure.ADC_Resolution = ADC_Resolution_12b;
+  ADC_InitStructure.ADC_ContinuousConvMode = ENABLE;
+  ADC_InitStructure.ADC_ExternalTrigConvEdge = ADC_ExternalTrigConvEdge_None;
+  ADC_InitStructure.ADC_DataAlign = ADC_DataAlign_Right;
+  ADC_InitStructure.ADC_ScanDirection = ADC_ScanDirection_Upward;
+  ADC_Init(ADC1, &ADC_InitStructure);
+
+  /* Convert the ADC1 Channel with 239.5 Cycles as sampling time */
+  ADC_ChannelConfig(ADC1, ADC_Channel_3 , ADC_SampleTime_239_5Cycles);
+
+  /* ADC Calibration */
+  ADC_GetCalibrationFactor(ADC1);
+
+  /* Enable the ADC peripheral */
+  ADC_Cmd(ADC1, ENABLE);
+
+  /* Wait the ADRDY flag */
+  while(!ADC_GetFlagStatus(ADC1, ADC_FLAG_ADRDY));
+
+  /* ADC1 regular Software Start Conv */
+  ADC_StartOfConversion(ADC1);
+}
 
 /**
 **===========================================================================
@@ -95,6 +140,8 @@ int main(void)
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
 
+  ADC_Config();
+
   GPIO_InitTypeDef gpio;
 
   // PB5 is user led
@@ -109,14 +156,6 @@ int main(void)
   gpio.GPIO_Pin = GPIO_Pin_10;
   gpio.GPIO_Mode = GPIO_Mode_OUT;
   gpio.GPIO_Speed = GPIO_Speed_Level_1;
-  gpio.GPIO_OType = GPIO_OType_PP;
-  gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIOA, &gpio);
-
-  // PA0-3 is analog in
-  gpio.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
-  gpio.GPIO_Mode = GPIO_Mode_AN;
-  gpio.GPIO_Speed = GPIO_Speed_Level_3;
   gpio.GPIO_OType = GPIO_OType_PP;
   gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(GPIOA, &gpio);
@@ -239,6 +278,12 @@ int main(void)
 
   while (1)
   {
+	  uint16_t adcValue;
+
+	  while(ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) == RESET);
+
+	  adcValue = ADC_GetConversionValue(ADC1);
+
 	  if (timerFlag)
 	  {
 		  timerFlag = 0;

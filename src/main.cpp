@@ -48,6 +48,7 @@ extern "C"
 uint32_t timer=0;
 uint8_t  timerFlag=0;
 
+void PWM_Config(void);
 
 
 /**
@@ -66,7 +67,8 @@ void SysTick_Handler(void)
     timer = 0;
   }
 }
-}
+
+
 
 static void ADC_Config(void)
 {
@@ -115,40 +117,11 @@ static void ADC_Config(void)
   ADC_StartOfConversion(ADC1);
 }
 
-// Does not fit on stack...
-GPIO_InitTypeDef gpio;
-TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
-TIM_OCInitTypeDef TIM_OCInitStructure;
-
-void GPIOPin_Config()
+static void PWM_Config(void)
 {
-
-	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
-	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
-
-	// PB5 is user led
-	gpio.GPIO_Pin = GPIO_Pin_5;
-	gpio.GPIO_Mode = GPIO_Mode_OUT;
-	gpio.GPIO_Speed = GPIO_Speed_Level_1;
-	gpio.GPIO_OType = GPIO_OType_PP;
-	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	GPIO_Init(GPIOB, &gpio);
-
-	// PB4 is user key
-	gpio.GPIO_Pin = GPIO_Pin_4;
-	gpio.GPIO_Mode = GPIO_Mode_IN;
-	gpio.GPIO_Speed = GPIO_Speed_Level_3;
-	gpio.GPIO_OType = GPIO_OType_PP;
-	gpio.GPIO_PuPd = GPIO_PuPd_UP;
-	GPIO_Init(GPIOB, &gpio);
-
-	// PA10 is distance trig
-	gpio.GPIO_Pin = GPIO_Pin_10;
-	gpio.GPIO_Mode = GPIO_Mode_OUT;
-	gpio.GPIO_Speed = GPIO_Speed_Level_1;
-	gpio.GPIO_OType = GPIO_OType_PP;
-	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
-	GPIO_Init(GPIOA, &gpio);
+	GPIO_InitTypeDef gpio;
+	TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+	TIM_OCInitTypeDef TIM_OCInitStructure;
 
 	// PA8 is PWM out
 	gpio.GPIO_Pin = GPIO_Pin_8;
@@ -226,6 +199,38 @@ void GPIOPin_Config()
 	/* TIM1 Main Output Enable */
 	TIM_CtrlPWMOutputs(TIM1, ENABLE);
 	TIM_CtrlPWMOutputs(TIM3, ENABLE);
+}
+
+static void GPIOPin_Config(void)
+{
+	GPIO_InitTypeDef gpio;
+
+	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
+	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
+
+	// PB5 is user led
+	gpio.GPIO_Pin = GPIO_Pin_5;
+	gpio.GPIO_Mode = GPIO_Mode_OUT;
+	gpio.GPIO_Speed = GPIO_Speed_Level_1;
+	gpio.GPIO_OType = GPIO_OType_PP;
+	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOB, &gpio);
+
+	// PB4 is user key
+	gpio.GPIO_Pin = GPIO_Pin_4;
+	gpio.GPIO_Mode = GPIO_Mode_IN;
+	gpio.GPIO_Speed = GPIO_Speed_Level_3;
+	gpio.GPIO_OType = GPIO_OType_PP;
+	gpio.GPIO_PuPd = GPIO_PuPd_UP;
+	GPIO_Init(GPIOB, &gpio);
+
+	// PA10 is distance trig
+	gpio.GPIO_Pin = GPIO_Pin_10;
+	gpio.GPIO_Mode = GPIO_Mode_OUT;
+	gpio.GPIO_Speed = GPIO_Speed_Level_1;
+	gpio.GPIO_OType = GPIO_OType_PP;
+	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOA, &gpio);
 
 #ifdef I2C_PIN_TEST
 	// PB6 I2C1_SCL
@@ -237,6 +242,7 @@ void GPIOPin_Config()
 	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	GPIO_Init(GPIOB, &gpio);
 #endif
+}
 }
 
 /**
@@ -259,6 +265,7 @@ int main(void)
 
 
   GPIOPin_Config();
+//  PWM_Config();
   ADC_Config();
 
   bool on = false;
@@ -270,12 +277,12 @@ int main(void)
 
   uint8_t readback;
 
-  //m24c64_write(0, 0x26);
-  //for(volatile int i = 0; i < 10000; i++);
-  //readback = m24c64_read(0);
+  m24c64_write(0, 0x26);
+  for(volatile int i = 0; i < 10000; i++);
+  readback = m24c64_read(0);
 
-//  ht16k33_init();
-//  ht16k33_writepixeldata();
+  ht16k33_init();
+  ht16k33_writepixeldata();
 
   while (1)
   {

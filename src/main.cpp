@@ -48,9 +48,6 @@ extern "C"
 uint32_t timer=0;
 uint8_t  timerFlag=0;
 
-void PWM_Config(void);
-
-
 /**
 **===========================================================================
 **
@@ -265,7 +262,7 @@ int main(void)
 
 
   GPIOPin_Config();
-//  PWM_Config();
+  PWM_Config();
   ADC_Config();
 
   bool on = false;

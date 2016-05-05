@@ -11,7 +11,7 @@
 #include "stm32f0xx_gpio.h"
 #include "stm32f0xx_i2c.h"
 
-void i2c_init(void)
+void I2C_Config(void)
 {
   I2C_InitTypeDef  I2C_InitStructure;
   GPIO_InitTypeDef gpio;

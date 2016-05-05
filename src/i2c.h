@@ -8,7 +8,7 @@
 #ifndef I2C_H_
 #define I2C_H_
 
-void i2c_init(void);
+void I2C_Config(void);
 
 
 #endif /* I2C_H_ */

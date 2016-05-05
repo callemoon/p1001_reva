@@ -120,6 +120,9 @@ static void PWM_Config(void)
 	TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
 	TIM_OCInitTypeDef TIM_OCInitStructure;
 
+	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
+	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
+
 	// PA8 is PWM out
 	gpio.GPIO_Pin = GPIO_Pin_8;
 	gpio.GPIO_Mode = GPIO_Mode_AF;
@@ -264,22 +267,21 @@ int main(void)
   GPIOPin_Config();
   PWM_Config();
   ADC_Config();
+  I2C_Config();
+
+//  uint8_t readback;
+//
+//  m24c64_write(0, 0x26);
+//  for(volatile int i = 0; i < 10000; i++);
+//  readback = m24c64_read(0);
+
+  ht16k33_init();
+  ht16k33_writepixeldata();
 
   bool on = false;
   bool ledOn = true;
   bool lastButtonState = false;
   bool buttonState = false;
-
-  i2c_init();
-
-  uint8_t readback;
-
-  m24c64_write(0, 0x26);
-  for(volatile int i = 0; i < 10000; i++);
-  readback = m24c64_read(0);
-
-  ht16k33_init();
-  ht16k33_writepixeldata();
 
   while (1)
   {

@@ -26,6 +26,10 @@
 #include "stm32f0xx_rcc.h"
 #include "stm32f0xx_gpio.h"
 
+#include "i2c.h"
+#include "m24c64.h"
+#include "ht16k33.h"
+
 /* Private typedef */
 
 /* Private define  */
@@ -38,21 +42,13 @@
 
 /* Private functions */
 
-#define I2C_PIN_TEST	// Set I2C pins to output open drain to measure function with mutilmeter
-//#define I2C_INIT	// Init I2C for eeprom
-//#define I2C_WRITE	// Writes data to eeprom
-//#define I2C_READ	// Reads data from eeprom
-
 extern "C"
 {
 /* Global variables */
 uint32_t timer=0;
 uint8_t  timerFlag=0;
 
-static const uint8_t EEPROM_ID	= 0xA0;
-static const uint16_t DATAADDRESS = 0x0;
-static const uint8_t TESTDATA1 = 0x33;
-static const uint8_t TESTDATA2 = 0x77;
+
 
 /**
 **===========================================================================
@@ -84,7 +80,7 @@ static void ADC_Config(void)
   RCC_APB2PeriphClockCmd(RCC_APB2Periph_ADC1, ENABLE);
 
   /* Configure ADC Channel 0,1,2,3 as analog input */
-  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;;
+  GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 | GPIO_Pin_2 | GPIO_Pin_3;
   GPIO_InitStructure.GPIO_Mode = GPIO_Mode_AN;
   GPIO_InitStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
   GPIO_Init(GPIOA, &GPIO_InitStructure);
@@ -119,6 +115,46 @@ static void ADC_Config(void)
   ADC_StartOfConversion(ADC1);
 }
 
+static void GPIOPin_Config()
+{
+	GPIO_InitTypeDef gpio;
+
+	// PB5 is user led
+	gpio.GPIO_Pin = GPIO_Pin_5;
+	gpio.GPIO_Mode = GPIO_Mode_OUT;
+	gpio.GPIO_Speed = GPIO_Speed_Level_1;
+	gpio.GPIO_OType = GPIO_OType_PP;
+	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOB, &gpio);
+
+	// PB4 is user key
+	gpio.GPIO_Pin = GPIO_Pin_4;
+	gpio.GPIO_Mode = GPIO_Mode_IN;
+	gpio.GPIO_Speed = GPIO_Speed_Level_3;
+	gpio.GPIO_OType = GPIO_OType_PP;
+	gpio.GPIO_PuPd = GPIO_PuPd_UP;
+	GPIO_Init(GPIOB, &gpio);
+
+	// PA10 is distance trig
+	gpio.GPIO_Pin = GPIO_Pin_10;
+	gpio.GPIO_Mode = GPIO_Mode_OUT;
+	gpio.GPIO_Speed = GPIO_Speed_Level_1;
+	gpio.GPIO_OType = GPIO_OType_PP;
+	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOA, &gpio);
+
+#ifdef I2C_PIN_TEST
+	// PB6 I2C1_SCL
+	// PB7 I2C1_SDA
+	gpio.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
+	gpio.GPIO_Mode = GPIO_Mode_OUT;
+	gpio.GPIO_Speed = GPIO_Speed_Level_3;
+	gpio.GPIO_OType = GPIO_OType_OD;
+	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOB, &gpio);
+#endif
+}
+
 /**
 **===========================================================================
 **
@@ -140,141 +176,24 @@ int main(void)
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
   RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
 
+  GPIOPin_Config();
   ADC_Config();
 
-  GPIO_InitTypeDef gpio;
-
-  // PB5 is user led
-  gpio.GPIO_Pin = GPIO_Pin_5;
-  gpio.GPIO_Mode = GPIO_Mode_OUT;
-  gpio.GPIO_Speed = GPIO_Speed_Level_1;
-  gpio.GPIO_OType = GPIO_OType_PP;
-  gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIOB, &gpio);
-
-  // PA10 is distance trig
-  gpio.GPIO_Pin = GPIO_Pin_10;
-  gpio.GPIO_Mode = GPIO_Mode_OUT;
-  gpio.GPIO_Speed = GPIO_Speed_Level_1;
-  gpio.GPIO_OType = GPIO_OType_PP;
-  gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIOA, &gpio);
-
-#ifdef I2C_PIN_TEST
-  // PB6 I2C1_SCL
-  // PB7 I2C1_SDA
-  gpio.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
-  gpio.GPIO_Mode = GPIO_Mode_OUT;
-  gpio.GPIO_Speed = GPIO_Speed_Level_3;
-  gpio.GPIO_OType = GPIO_OType_OD;
-  gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIOB, &gpio);
-#endif
-
-#ifdef I2C_INIT
-  I2C_InitTypeDef  I2C_InitStructure;
-
-  RCC_I2CCLKConfig(RCC_I2C1CLK_HSI);
-
-  RCC_APB1PeriphClockCmd(RCC_APB1Periph_I2C1, ENABLE);
-  GPIO_PinAFConfig(GPIOB, GPIO_PinSource6, GPIO_AF_1);
-  GPIO_PinAFConfig(GPIOB, GPIO_PinSource7, GPIO_AF_1);
-
-  // PB6 I2C1_SCL
-  // PB7 I2C1_SDA
-  gpio.GPIO_Pin = GPIO_Pin_6 | GPIO_Pin_7;
-  gpio.GPIO_Mode = GPIO_Mode_AF;
-  gpio.GPIO_Speed = GPIO_Speed_Level_3;
-  gpio.GPIO_OType = GPIO_OType_OD;
-  gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
-  GPIO_Init(GPIOB, &gpio);
-
-  /* I2C configuration */
-  I2C_InitStructure.I2C_Mode = I2C_Mode_I2C;
-  I2C_InitStructure.I2C_AnalogFilter = I2C_AnalogFilter_Enable;
-  I2C_InitStructure.I2C_DigitalFilter = 0x00;
-  I2C_InitStructure.I2C_OwnAddress1 = 0x0;
-  I2C_InitStructure.I2C_Ack = I2C_Ack_Enable;
-  I2C_InitStructure.I2C_AcknowledgedAddress = I2C_AcknowledgedAddress_7bit;
-  I2C_InitStructure.I2C_Timing = 0x10420f13;
-
-  /* Apply sEE_I2C configuration after enabling it */
-  I2C_Init(I2C1, &I2C_InitStructure);
-
-  /* sEE_I2C Peripheral Enable */
-  I2C_Cmd(I2C1, ENABLE);
-#endif
-
-#ifdef I2C_WRITE
-  while(I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY) == SET);
-
-  I2C_TransferHandling(I2C1, EEPROM_ID, 2, I2C_Reload_Mode, I2C_Generate_Start_Write);
-
-  while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
-
-  I2C_SendData(I2C1, (uint8_t)((DATAADDRESS & 0xFF00) >> 8));
-
-  while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
-
-  I2C_SendData(I2C1, (uint8_t)(DATAADDRESS & 0x00FF));
-
-  while(I2C_GetFlagStatus(I2C1, I2C_ISR_TCR) == RESET);
-
-  I2C_TransferHandling(I2C1, EEPROM_ID, 2, I2C_AutoEnd_Mode, I2C_No_StartStop);
-
-  while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
-
-  I2C_SendData(I2C1, TESTDATA1);
-
-  while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
-
-  I2C_SendData(I2C1, TESTDATA2);
-
-  while(I2C_GetFlagStatus(I2C1, I2C_ISR_STOPF) == RESET);
-
-  I2C_ClearFlag(I2C1, I2C_ICR_STOPCF);
-#endif
-
-#ifdef I2C_READ
-  uint8_t readback;
-  uint8_t readback2;
-
-  while(I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY) == SET);
-  // Read back data
-  I2C_TransferHandling(I2C1, EEPROM_ID, 2, I2C_SoftEnd_Mode, I2C_Generate_Start_Write);
-
-  while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
-
-  I2C_SendData(I2C1, (uint8_t)((DATAADDRESS & 0xFF00) >> 8));
-
-  while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
-
-  I2C_SendData(I2C1, (uint8_t)(DATAADDRESS & 0x00FF));
-
-  while(I2C_GetFlagStatus(I2C1, I2C_ISR_TC) == RESET);
-
-  I2C_TransferHandling(I2C1, EEPROM_ID, 2, I2C_AutoEnd_Mode, I2C_Generate_Start_Read);
-
-  while(I2C_GetFlagStatus(I2C1, I2C_ISR_RXNE) == RESET);
-
-  readback = I2C_ReceiveData(I2C1);
-
-  while(I2C_GetFlagStatus(I2C1, I2C_ISR_RXNE) == RESET);
-
-  readback2 = I2C_ReceiveData(I2C1);
-
-  while(I2C_GetFlagStatus(I2C1, I2C_ISR_STOPF) == RESET);
-
-   /* Clear STOPF flag */
-  I2C_ClearFlag(I2C1, I2C_ICR_STOPCF);
-
-  if(readback != TESTDATA1 || readback2 != TESTDATA2)
-  {
-	  return 0;
-  }
-#endif
-
   bool on = false;
+  bool blinkMode = true;
+  bool lastButtonState = false;
+  bool buttonState = false;
+
+  i2c_init();
+
+  uint8_t readback;
+
+  //m24c64_write(0, 0x26);
+  //for(volatile int i = 0; i < 10000; i++);
+  //readback = m24c64_read(0);
+
+  ht16k33_init();
+  ht16k33_writepixeldata();
 
   while (1)
   {
@@ -284,7 +203,16 @@ int main(void)
 
 	  adcValue = ADC_GetConversionValue(ADC1);
 
-	  if (timerFlag)
+	  buttonState = (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_4) == Bit_RESET);
+
+	  if((buttonState != lastButtonState) && buttonState)
+	  {
+		  blinkMode = !blinkMode;
+	  }
+
+	  lastButtonState = buttonState;
+
+	  if (blinkMode && timerFlag)
 	  {
 		  timerFlag = 0;
 		  ii++;

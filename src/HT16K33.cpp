@@ -21,7 +21,7 @@
 
 #define HT16K33_CMD_BRIGHTNESS 0xE0
 
-void ht16k33_i2cwrite(uint8_t i2cAdress, uint8_t command, uint8_t *data, uint8_t len)
+static void ht16k33_i2cwrite(uint8_t i2cAdress, uint8_t command, uint8_t *data, uint8_t len)
 {
   while(I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY) == SET);
 

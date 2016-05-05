@@ -115,13 +115,16 @@ static void ADC_Config(void)
   ADC_StartOfConversion(ADC1);
 }
 
+// Does not fit on stack...
+GPIO_InitTypeDef gpio;
+TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+TIM_OCInitTypeDef TIM_OCInitStructure;
+
 void GPIOPin_Config()
 {
 
 	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
 	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
-
-	GPIO_InitTypeDef gpio;
 
 	// PB5 is user led
 	gpio.GPIO_Pin = GPIO_Pin_5;
@@ -188,8 +191,6 @@ void GPIOPin_Config()
 	RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);
 	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
 
-	TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
-	TIM_OCInitTypeDef TIM_OCInitStructure;
 
 	/* Time Base configuration */
 	TIM_TimeBaseStructure.TIM_Prescaler = 0;
@@ -258,7 +259,7 @@ int main(void)
 
 
   GPIOPin_Config();
-  //ADC_Config();
+  ADC_Config();
 
   bool on = false;
   bool ledOn = true;

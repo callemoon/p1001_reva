@@ -117,6 +117,10 @@ static void ADC_Config(void)
 
 static void GPIOPin_Config()
 {
+
+	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
+	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
+
 	GPIO_InitTypeDef gpio;
 
 	// PB5 is user led
@@ -173,14 +177,12 @@ int main(void)
   ii = SystemCoreClock;    /* This is a way to read the System core clock */
   ii = 0;
 
-  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
-  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOB, ENABLE);
 
   GPIOPin_Config();
   ADC_Config();
 
   bool on = false;
-  bool blinkMode = true;
+  bool ledOn = true;
   bool lastButtonState = false;
   bool buttonState = false;
 
@@ -192,8 +194,8 @@ int main(void)
   //for(volatile int i = 0; i < 10000; i++);
   //readback = m24c64_read(0);
 
-  ht16k33_init();
-  ht16k33_writepixeldata();
+//  ht16k33_init();
+//  ht16k33_writepixeldata();
 
   while (1)
   {
@@ -207,12 +209,21 @@ int main(void)
 
 	  if((buttonState != lastButtonState) && buttonState)
 	  {
-		  blinkMode = !blinkMode;
+		  ledOn = !ledOn;
 	  }
 
 	  lastButtonState = buttonState;
 
-	  if (blinkMode && timerFlag)
+	  if(ledOn)
+	  {
+		  GPIO_WriteBit(GPIOB, GPIO_Pin_5, Bit_SET);
+	  }
+	  else
+	  {
+		  GPIO_WriteBit(GPIOB, GPIO_Pin_5, Bit_RESET);
+	  }
+
+	  if (timerFlag)
 	  {
 		  timerFlag = 0;
 		  ii++;
@@ -221,7 +232,6 @@ int main(void)
 
 		  if(on)
 		  {
-			  GPIO_WriteBit(GPIOB, GPIO_Pin_5, Bit_SET);
 			  GPIO_WriteBit(GPIOA, GPIO_Pin_10, Bit_SET);
 
 #ifdef I2C_PIN_TEST
@@ -231,7 +241,6 @@ int main(void)
 		  }
 		  else
 		  {
-			  GPIO_WriteBit(GPIOB, GPIO_Pin_5, Bit_RESET);
 			  GPIO_WriteBit(GPIOA, GPIO_Pin_10, Bit_RESET);
 
 #ifdef I2C_PIN_TEST

@@ -115,7 +115,7 @@ static void ADC_Config(void)
   ADC_StartOfConversion(ADC1);
 }
 
-static void GPIOPin_Config()
+void GPIOPin_Config()
 {
 
 	RCC_AHBPeriphClockCmd(RCC_AHBPeriph_GPIOA, ENABLE);
@@ -146,6 +146,85 @@ static void GPIOPin_Config()
 	gpio.GPIO_OType = GPIO_OType_PP;
 	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
 	GPIO_Init(GPIOA, &gpio);
+
+	// PA8 is PWM out
+	gpio.GPIO_Pin = GPIO_Pin_8;
+	gpio.GPIO_Mode = GPIO_Mode_AF;
+	gpio.GPIO_Speed = GPIO_Speed_Level_1;
+	gpio.GPIO_OType = GPIO_OType_PP;
+	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOA, &gpio);
+
+	// PA9 is PWM out
+	gpio.GPIO_Pin = GPIO_Pin_9;
+	gpio.GPIO_Mode = GPIO_Mode_AF;
+	gpio.GPIO_Speed = GPIO_Speed_Level_1;
+	gpio.GPIO_OType = GPIO_OType_PP;
+	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOA, &gpio);
+
+	// PB0 is PWM out
+	gpio.GPIO_Pin = GPIO_Pin_0;
+	gpio.GPIO_Mode = GPIO_Mode_AF;
+	gpio.GPIO_Speed = GPIO_Speed_Level_1;
+	gpio.GPIO_OType = GPIO_OType_PP;
+	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOB, &gpio);
+
+	// PB1 is PWM out
+	gpio.GPIO_Pin = GPIO_Pin_1;
+	gpio.GPIO_Mode = GPIO_Mode_AF;
+	gpio.GPIO_Speed = GPIO_Speed_Level_1;
+	gpio.GPIO_OType = GPIO_OType_PP;
+	gpio.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOB, &gpio);
+
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource8, GPIO_AF_2);
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource9, GPIO_AF_2);
+	GPIO_PinAFConfig(GPIOB, GPIO_PinSource0, GPIO_AF_1);
+	GPIO_PinAFConfig(GPIOB, GPIO_PinSource1, GPIO_AF_1);
+
+	/* TIM1 clock enable */
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_TIM1, ENABLE);
+	RCC_APB1PeriphClockCmd(RCC_APB1Periph_TIM3, ENABLE);
+
+	TIM_TimeBaseInitTypeDef TIM_TimeBaseStructure;
+	TIM_OCInitTypeDef TIM_OCInitStructure;
+
+	/* Time Base configuration */
+	TIM_TimeBaseStructure.TIM_Prescaler = 0;
+	TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
+	TIM_TimeBaseStructure.TIM_Period = 1024;
+	TIM_TimeBaseStructure.TIM_ClockDivision = 0;
+	TIM_TimeBaseStructure.TIM_RepetitionCounter = 0;
+
+	TIM_TimeBaseInit(TIM1, &TIM_TimeBaseStructure);
+	TIM_TimeBaseInit(TIM3, &TIM_TimeBaseStructure);
+
+	/* Channel 1, 2,3 and 4 Configuration in PWM mode */
+	TIM_OCInitStructure.TIM_OCMode = TIM_OCMode_PWM2;
+	TIM_OCInitStructure.TIM_OutputState = TIM_OutputState_Enable;
+	TIM_OCInitStructure.TIM_OutputNState = TIM_OutputNState_Enable;
+	TIM_OCInitStructure.TIM_Pulse = 128;
+	TIM_OCInitStructure.TIM_OCPolarity = TIM_OCPolarity_Low;
+	TIM_OCInitStructure.TIM_OCNPolarity = TIM_OCNPolarity_High;
+	TIM_OCInitStructure.TIM_OCIdleState = TIM_OCIdleState_Set;
+	TIM_OCInitStructure.TIM_OCNIdleState = TIM_OCIdleState_Reset;
+
+	TIM_OC1Init(TIM1, &TIM_OCInitStructure);
+	TIM_OC3Init(TIM3, &TIM_OCInitStructure);
+
+	TIM_OCInitStructure.TIM_Pulse = 256;
+	TIM_OC2Init(TIM1, &TIM_OCInitStructure);
+	TIM_OC4Init(TIM3, &TIM_OCInitStructure);
+
+	/* TIM1 counter enable */
+	TIM_Cmd(TIM1, ENABLE);
+	TIM_Cmd(TIM3, ENABLE);
+
+	/* TIM1 Main Output Enable */
+	TIM_CtrlPWMOutputs(TIM1, ENABLE);
+	TIM_CtrlPWMOutputs(TIM3, ENABLE);
 
 #ifdef I2C_PIN_TEST
 	// PB6 I2C1_SCL
@@ -179,7 +258,7 @@ int main(void)
 
 
   GPIOPin_Config();
-  ADC_Config();
+  //ADC_Config();
 
   bool on = false;
   bool ledOn = true;

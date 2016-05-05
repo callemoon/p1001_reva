@@ -66,7 +66,7 @@ uint8_t m24c64_read(uint16_t address)
 
   while(I2C_GetFlagStatus(I2C1, I2C_ISR_STOPF) == RESET);
 
-   /* Clear STOPF flag */
+  /* Clear STOPF flag */
   I2C_ClearFlag(I2C1, I2C_ICR_STOPCF);
 
   return readData;

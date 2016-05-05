@@ -23,57 +23,57 @@
 
 void ht16k33_i2cwrite(uint8_t i2cAdress, uint8_t command, uint8_t *data, uint8_t len)
 {
-	while(I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY) == SET);
+  while(I2C_GetFlagStatus(I2C1, I2C_FLAG_BUSY) == SET);
 
-	I2C_TransferHandling(I2C1, i2cAdress, 1 + len, I2C_Reload_Mode, I2C_Generate_Start_Write);
+  I2C_TransferHandling(I2C1, i2cAdress, 1 + len, I2C_Reload_Mode, I2C_Generate_Start_Write);
 
-	while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
+  while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
 
-	I2C_SendData(I2C1, (uint8_t)command);
+  I2C_SendData(I2C1, (uint8_t)command);
 
-	if(len == 0)
-	{
-		while(I2C_GetFlagStatus(I2C1, I2C_ISR_TCR) == RESET);
-	}
-	else
-	{
-		while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
-	}
+  if(len == 0)
+  {
+    while(I2C_GetFlagStatus(I2C1, I2C_ISR_TCR) == RESET);
+  }
+  else
+  {
+    while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
+  }
 
-	for(uint8_t i = 0; i < len; i++)
-	{
-		while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
+  for(uint8_t i = 0; i < len; i++)
+  {
+    while(I2C_GetFlagStatus(I2C1, I2C_ISR_TXIS) == RESET);
 
-		I2C_SendData(I2C1, data[i]);
-	}
+    I2C_SendData(I2C1, data[i]);
+  }
 
-	I2C_TransferHandling(I2C1, i2cAdress, len, I2C_AutoEnd_Mode, I2C_Generate_Stop);
+  I2C_TransferHandling(I2C1, i2cAdress, len, I2C_AutoEnd_Mode, I2C_Generate_Stop);
 
-	while(I2C_GetFlagStatus(I2C1, I2C_ISR_STOPF) == RESET);
+  while(I2C_GetFlagStatus(I2C1, I2C_ISR_STOPF) == RESET);
 
-	I2C_ClearFlag(I2C1, I2C_ICR_STOPCF);
+  I2C_ClearFlag(I2C1, I2C_ICR_STOPCF);
 }
 
 void ht16k33_init(void)
 {
-	// Turn on ocillator
-	ht16k33_i2cwrite(I2C_ADDRESS, 0x21, 0, 0);
+  // Turn on ocillator
+  ht16k33_i2cwrite(I2C_ADDRESS, 0x21, 0, 0);
 
-	// Blink-mode
-	uint8_t blink = HT16K33_BLINK_CMD | HT16K33_BLINK_DISPLAYON | (HT16K33_BLINK_2HZ << 1);
+  // Blink-mode
+  uint8_t blink = HT16K33_BLINK_CMD | HT16K33_BLINK_DISPLAYON | (HT16K33_BLINK_2HZ << 1);
 
-	ht16k33_i2cwrite(I2C_ADDRESS, blink, 0, 0);
+  ht16k33_i2cwrite(I2C_ADDRESS, blink, 0, 0);
 
-	// Brightness
-	uint8_t brightness = HT16K33_CMD_BRIGHTNESS | 0xF;
+  // Brightness
+  uint8_t brightness = HT16K33_CMD_BRIGHTNESS | 0xF;
 
-	ht16k33_i2cwrite(I2C_ADDRESS, brightness, 0, 0);
+  ht16k33_i2cwrite(I2C_ADDRESS, brightness, 0, 0);
 }
 
 void ht16k33_writepixeldata(void)
 {
-	// Write pixel-data
-	//uint8_t data[] = {0x1, 0x0, 0x2, 0x0, 0x4, 0x0, 0x8, 0x0, 0x10, 0x0, 0x20, 0x0, 0x40, 0x0, 0x80, 0x0};
+  // Write pixel-data
+  uint8_t data[] = {0xFF, 0x0, 0xFF, 0x0, 0xFF, 0x0, 0x8, 0x0, 0x10, 0x0, 0x20, 0x0, 0x40, 0x0, 0x80, 0x0};
 
-	//ht16k33_i2cwrite(I2C_ADDRESS, 0x0, data, 16);
+  ht16k33_i2cwrite(I2C_ADDRESS, 0x0, data, 16);
 }

@@ -30,6 +30,10 @@
 #include "m24c64.h"
 #include "ht16k33.h"
 
+#define ADC1_DR_Address    0x40012440
+
+__IO uint16_t RegularConvData_Tab[4];
+
 /* Private typedef */
 
 /* Private define  */
@@ -97,10 +101,19 @@ static void ADC_Config(void)
   ADC_Init(ADC1, &ADC_InitStructure);
 
   /* Convert the ADC1 Channel with 239.5 Cycles as sampling time */
-  ADC_ChannelConfig(ADC1, ADC_Channel_3 , ADC_SampleTime_239_5Cycles);
+  ADC_ChannelConfig(ADC1, ADC_Channel_0 , ADC_SampleTime_55_5Cycles);
+  ADC_ChannelConfig(ADC1, ADC_Channel_1 , ADC_SampleTime_55_5Cycles);
+  ADC_ChannelConfig(ADC1, ADC_Channel_2 , ADC_SampleTime_55_5Cycles);
+  ADC_ChannelConfig(ADC1, ADC_Channel_3 , ADC_SampleTime_55_5Cycles);
 
   /* ADC Calibration */
   ADC_GetCalibrationFactor(ADC1);
+
+  /* ADC DMA request in circular mode */
+  ADC_DMARequestModeConfig(ADC1, ADC_DMAMode_Circular);
+
+  /* Enable ADC_DMA */
+  ADC_DMACmd(ADC1, ENABLE);
 
   /* Enable the ADC peripheral */
   ADC_Cmd(ADC1, ENABLE);
@@ -110,6 +123,30 @@ static void ADC_Config(void)
 
   /* ADC1 regular Software Start Conv */
   ADC_StartOfConversion(ADC1);
+}
+
+static void DMA_Config(void)
+{
+  DMA_InitTypeDef   DMA_InitStructure;
+  /* DMA1 clock enable */
+  RCC_AHBPeriphClockCmd(RCC_AHBPeriph_DMA1 , ENABLE);
+
+  /* DMA1 Channel1 Config */
+  DMA_DeInit(DMA1_Channel1);
+  DMA_InitStructure.DMA_PeripheralBaseAddr = (uint32_t)ADC1_DR_Address;
+  DMA_InitStructure.DMA_MemoryBaseAddr = (uint32_t)RegularConvData_Tab;
+  DMA_InitStructure.DMA_DIR = DMA_DIR_PeripheralSRC;
+  DMA_InitStructure.DMA_BufferSize = 4;
+  DMA_InitStructure.DMA_PeripheralInc = DMA_PeripheralInc_Disable;
+  DMA_InitStructure.DMA_MemoryInc = DMA_MemoryInc_Enable;
+  DMA_InitStructure.DMA_PeripheralDataSize = DMA_PeripheralDataSize_HalfWord;
+  DMA_InitStructure.DMA_MemoryDataSize = DMA_MemoryDataSize_HalfWord;
+  DMA_InitStructure.DMA_Mode = DMA_Mode_Circular;
+  DMA_InitStructure.DMA_Priority = DMA_Priority_High;
+  DMA_InitStructure.DMA_M2M = DMA_M2M_Disable;
+  DMA_Init(DMA1_Channel1, &DMA_InitStructure);
+  /* DMA1 Channel1 enable */
+  DMA_Cmd(DMA1_Channel1, ENABLE);
 }
 
 static void PWM_Config(void)
@@ -166,7 +203,7 @@ static void PWM_Config(void)
   /* Time Base configuration */
   TIM_TimeBaseStructure.TIM_Prescaler = 0;
   TIM_TimeBaseStructure.TIM_CounterMode = TIM_CounterMode_Up;
-  TIM_TimeBaseStructure.TIM_Period = 1024;
+  TIM_TimeBaseStructure.TIM_Period = 1000;
   TIM_TimeBaseStructure.TIM_ClockDivision = 0;
   TIM_TimeBaseStructure.TIM_RepetitionCounter = 0;
 
@@ -263,17 +300,20 @@ int main(void)
 
   GPIOPin_Config();
   PWM_Config();
+
   ADC_Config();
+  DMA_Config();
+
   I2C_Config();
 
-  //  uint8_t readback;
-  //
-  //  m24c64_write(0, 0x26);
-  //  for(volatile int i = 0; i < 10000; i++);
-  //  readback = m24c64_read(0);
-
-  ht16k33_init();
-  ht16k33_writepixeldata();
+//  uint8_t readback;
+//
+//  m24c64_write(0, 0x26);
+//  for(volatile int i = 0; i < 10000; i++);
+//  readback = m24c64_read(0);
+//
+//  ht16k33_init();
+//  ht16k33_writepixeldata();
 
   bool on = false;
   bool ledOn = true;
@@ -282,12 +322,6 @@ int main(void)
 
   while (1)
   {
-    uint16_t adcValue;
-
-    while(ADC_GetFlagStatus(ADC1, ADC_FLAG_EOC) == RESET);
-
-    adcValue = ADC_GetConversionValue(ADC1);
-
     buttonState = (GPIO_ReadInputDataBit(GPIOB, GPIO_Pin_4) == Bit_RESET);
 
     if((buttonState != lastButtonState) && buttonState)
